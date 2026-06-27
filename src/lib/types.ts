@@ -14,6 +14,8 @@ export interface Post {
   images: PostImage[];
   createdAt: Timestamp;
   likeCount: number;
+  visibility?: "public" | "private";
+  allowList?: string[];
 }
 
 export interface Comment {

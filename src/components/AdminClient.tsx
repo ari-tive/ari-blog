@@ -168,12 +168,19 @@ export default function AdminClient() {
               style={{ borderRadius: 0 }}
             >
               <div className="min-w-0 flex-1">
-                <h2
-                  className="text-lg text-foreground truncate"
-                  style={displayFont}
-                >
-                  {post.title}
-                </h2>
+                <div className="flex items-center gap-2">
+                  <h2
+                    className="text-lg text-foreground truncate"
+                    style={displayFont}
+                  >
+                    {post.title}
+                  </h2>
+                  {post.visibility === "private" && (
+                    <span className="px-2 py-0.5 rounded-full bg-white/10 text-xs text-muted-foreground shrink-0">
+                      Private
+                    </span>
+                  )}
+                </div>
                 <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1.5">
                   <span>/{post.slug}</span>
                   {post.createdAt && <span>{formatDate(post.createdAt)}</span>}

@@ -8,7 +8,8 @@ service cloud.firestore {
     }
 
     match /posts/{postId} {
-      allow read: if true;
+      allow read: if resource.data.visibility != "private"
+                  || (request.auth != null && request.auth.uid in resource.data.allowList);
       allow create, update, delete: if request.auth != null;
 
       match /comments/{commentId} {
