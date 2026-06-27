@@ -3,12 +3,12 @@ import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyBni0D9RVnIXF6jhwF8V_xLXJfL0z86uiE",
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
   authDomain: "aritive-blog.firebaseapp.com",
   projectId: "aritive-blog",
   storageBucket: "aritive-blog.firebasestorage.app",
   messagingSenderId: "239316491523",
-  appId: "1:239316491523:web:9d76df794e968f55009d36",
+  appId: "1:239316491523:web:13fcdf3c28713f55009d36",
 };
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
