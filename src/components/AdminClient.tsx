@@ -50,8 +50,7 @@ export default function AdminClient() {
       const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
       const snap = await getDocs(q);
       setPosts(snap.docs.map((d) => ({ id: d.id, ...d.data() } as Post)));
-    } catch (e) {
-      console.error("Admin fetch error:", e);
+    } catch {
       setError("Failed to load posts");
     } finally {
       setLoadingPosts(false);
