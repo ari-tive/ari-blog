@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { PostImage } from "@/lib/types";
 import { X, Check, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
 
@@ -12,41 +12,58 @@ interface Props {
 export default function WizardStepImages({ images, onChange }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const [errors, setErrors] = useState<string[]>([]);
 
-  async function handleFile(file: File) {
-    setError("");
-    if (file.size > 5 * 1024 * 1024) {
-      setError("File too large — 5MB limit");
-      return;
-    }
-
-    setUploading(true);
-    try {
-      const form = new FormData();
-      form.append("file", file);
-
-      const res = await fetch("/api/upload-image", {
-        method: "POST",
-        body: form,
+  const uploadFiles = useCallback(
+    async (files: File[]) => {
+      setErrors([]);
+      const valid = files.filter((f) => {
+        if (f.size > 5 * 1024 * 1024) {
+          setErrors((prev) => [...prev, `${f.name}: too large (5MB limit)`]);
+          return false;
+        }
+        return true;
       });
 
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Upload failed");
-        return;
+      if (valid.length === 0) return;
+
+      setUploading(true);
+      const current = [...images];
+
+      for (const file of valid) {
+        try {
+          const form = new FormData();
+          form.append("file", file);
+          const res = await fetch("/api/upload-image", { method: "POST", body: form });
+          const data = await res.json();
+
+          if (!res.ok) {
+            setErrors((prev) => [...prev, `${file.name}: ${data.error || "upload failed"}`]);
+            continue;
+          }
+
+          if (!current.some((img) => img.url === data.url)) {
+            current.push({ url: data.url, isThumbnail: current.length === 0 });
+          }
+        } catch {
+          setErrors((prev) => [...prev, `${file.name}: connection failed`]);
+        }
       }
 
-      if (images.some((img) => img.url === data.url)) return;
-      onChange([
-        ...images,
-        { url: data.url, isThumbnail: images.length === 0 },
-      ]);
-    } catch {
-      setError("Upload failed — check your connection");
-    } finally {
+      onChange(current);
       setUploading(false);
-    }
+    },
+    [images, onChange]
+  );
+
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer.files).filter((f) =>
+      f.type.startsWith("image/")
+    );
+    if (files.length > 0) uploadFiles(files);
   }
 
   function removeImage(index: number) {
@@ -70,10 +87,11 @@ export default function WizardStepImages({ images, onChange }: Props) {
         ref={inputRef}
         type="file"
         accept="image/*"
+        multiple
         className="hidden"
         onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleFile(file);
+          const files = Array.from(e.target.files || []);
+          if (files.length > 0) uploadFiles(files);
           e.target.value = "";
         }}
       />
@@ -82,7 +100,14 @@ export default function WizardStepImages({ images, onChange }: Props) {
         type="button"
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
-        className="flex items-center justify-center gap-3 py-10 rounded-xl border border-dashed border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground transition-colors disabled:opacity-50"
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={handleDrop}
+        className={`flex items-center justify-center gap-3 py-10 rounded-xl border border-dashed transition-colors disabled:opacity-50 ${
+          dragOver
+            ? "border-foreground/50 bg-white/5 text-foreground"
+            : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+        }`}
       >
         {uploading ? (
           <Loader2 size={20} className="animate-spin" />
@@ -90,11 +115,19 @@ export default function WizardStepImages({ images, onChange }: Props) {
           <Upload size={20} />
         )}
         <span className="text-sm">
-          {uploading ? "Uploading..." : "Click to upload an image"}
+          {uploading
+            ? "Uploading..."
+            : "Click to upload or drag images here"}
         </span>
       </button>
 
-      {error && <p className="text-red-400 text-xs">{error}</p>}
+      {errors.length > 0 && (
+        <div className="flex flex-col gap-1">
+          {errors.map((e, i) => (
+            <p key={i} className="text-red-400 text-xs">{e}</p>
+          ))}
+        </div>
+      )}
 
       {images.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 rounded-xl border border-dashed border-border text-muted-foreground">
