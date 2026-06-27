@@ -3,45 +3,19 @@
 import { useState, useEffect } from "react";
 import { Post } from "@/lib/types";
 import { useAuth } from "@/context/AuthContext";
-import { db } from "@/lib/firebase";
-import {
-  collection,
-  getDocs,
-  orderBy,
-  query,
-} from "firebase/firestore";
 import Hero from "@/components/Hero";
 import PostsGrid from "@/components/PostsGrid";
 
-export default function HomepageContent() {
+export default function HomepageContent({ posts: allPosts }: { posts: Post[] }) {
   const { user } = useAuth();
-  const [posts, setPosts] = useState<Post[]>([]);
   const [settled, setSettled] = useState(false);
   const [postsVisible, setPostsVisible] = useState(false);
 
-  useEffect(() => {
-    async function fetchPosts() {
-      try {
-        const publicQ = query(
-          collection(db, "posts"),
-          orderBy("createdAt", "desc")
-        );
-        const snap = await getDocs(publicQ);
-        let allPosts = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Post));
-
-        allPosts = allPosts.filter((p) => {
-          if (!p.visibility || p.visibility === "public") return true;
-          if (!user) return false;
-          return p.allowList?.includes(user.uid) ?? false;
-        });
-
-        setPosts(allPosts);
-      } catch {
-        setPosts([]);
-      }
-    }
-    fetchPosts();
-  }, [user]);
+  const posts = allPosts.filter((p) => {
+    if (!p.visibility || p.visibility === "public") return true;
+    if (!user) return false;
+    return p.allowList?.includes(user.uid) ?? false;
+  });
 
   useEffect(() => {
     if (sessionStorage.getItem("hero-seen")) {
