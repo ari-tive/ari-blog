@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { PostImage } from "@/lib/types";
-import { Plus, X, Check, Image as ImageIcon } from "lucide-react";
+import { X, Check, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
 
 interface Props {
   images: PostImage[];
@@ -10,18 +10,43 @@ interface Props {
 }
 
 export default function WizardStepImages({ images, onChange }: Props) {
-  const [url, setUrl] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState("");
 
-  function addImage() {
-    const trimmed = url.trim();
-    if (!trimmed) return;
-    if (images.some((img) => img.url === trimmed)) return;
-    const newImages = [
-      ...images,
-      { url: trimmed, isThumbnail: images.length === 0 },
-    ];
-    onChange(newImages);
-    setUrl("");
+  async function handleFile(file: File) {
+    setError("");
+    if (file.size > 5 * 1024 * 1024) {
+      setError("File too large — 5MB limit");
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const form = new FormData();
+      form.append("file", file);
+
+      const res = await fetch("/api/upload-image", {
+        method: "POST",
+        body: form,
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || "Upload failed");
+        return;
+      }
+
+      if (images.some((img) => img.url === data.url)) return;
+      onChange([
+        ...images,
+        { url: data.url, isThumbnail: images.length === 0 },
+      ]);
+    } catch {
+      setError("Upload failed — check your connection");
+    } finally {
+      setUploading(false);
+    }
   }
 
   function removeImage(index: number) {
@@ -41,31 +66,41 @@ export default function WizardStepImages({ images, onChange }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex gap-2">
-        <input
-          type="url"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addImage())}
-          placeholder="Paste image URL..."
-          className="flex-1 px-4 py-3 rounded-lg bg-white/5 border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/30 transition-colors"
-        />
-        <button
-          type="button"
-          onClick={addImage}
-          disabled={!url.trim()}
-          className="px-4 py-3 rounded-lg bg-white/10 border border-border text-foreground text-sm hover:bg-white/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          <Plus size={16} />
-          Add
-        </button>
-      </div>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFile(file);
+          e.target.value = "";
+        }}
+      />
+
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={uploading}
+        className="flex items-center justify-center gap-3 py-10 rounded-xl border border-dashed border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground transition-colors disabled:opacity-50"
+      >
+        {uploading ? (
+          <Loader2 size={20} className="animate-spin" />
+        ) : (
+          <Upload size={20} />
+        )}
+        <span className="text-sm">
+          {uploading ? "Uploading..." : "Click to upload an image"}
+        </span>
+      </button>
+
+      {error && <p className="text-red-400 text-xs">{error}</p>}
 
       {images.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 rounded-xl border border-dashed border-border text-muted-foreground">
           <ImageIcon size={32} className="mb-3 opacity-40" />
           <p className="text-sm">No images added yet</p>
-          <p className="text-xs mt-1">Add image URLs above — optional for a post</p>
+          <p className="text-xs mt-1">Upload images above — optional for a post</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
