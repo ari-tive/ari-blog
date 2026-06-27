@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 import { signOut, GoogleAuthProvider, signInWithPopup, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -22,6 +23,17 @@ export default function Navbar() {
   const [password, setPassword] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [displayName, setDisplayName] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) {
+      setDisplayName(null);
+      return;
+    }
+    getDoc(doc(db, "users", user.uid)).then((snap) => {
+      if (snap.exists()) setDisplayName(snap.data().username);
+    });
+  }, [user]);
 
   const isBlogPost = pathname.startsWith("/blog/");
 
@@ -135,7 +147,7 @@ export default function Navbar() {
                 {user ? (
                   <>
                     <span className="text-xs text-muted-foreground truncate max-w-[160px]">
-                      {user.email || user.displayName}
+                      {displayName || user.email || user.displayName}
                     </span>
                     <button
                       onClick={handleSignOut}

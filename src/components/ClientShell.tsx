@@ -1,10 +1,11 @@
 "use client";
 
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ClickSpark from "@/components/ClickSpark";
+import UsernameOnboarding from "@/components/UsernameOnboarding";
 import { useProximityGlow } from "@/hooks/useProximityGlow";
 
 const VIDEO_URL =
@@ -47,6 +48,24 @@ function FixedVideoBackground() {
   );
 }
 
+function AuthGate({ children }: { children: ReactNode }) {
+  const { user, loading, username, usernameLoading } = useAuth();
+
+  if (loading || usernameLoading) {
+    return (
+      <div className="fixed inset-0 z-[70] flex items-center justify-center">
+        <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (user && !username) {
+    return <UsernameOnboarding />;
+  }
+
+  return <>{children}</>;
+}
+
 export default function ClientShell({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
 
@@ -71,7 +90,9 @@ export default function ClientShell({ children }: { children: ReactNode }) {
             className="transition-opacity duration-500"
             style={{ opacity: ready ? 1 : 0 }}
           >
-            <main className="relative z-10">{children}</main>
+            <main className="relative z-10">
+              <AuthGate>{children}</AuthGate>
+            </main>
             <Footer />
           </div>
         </ClickSpark>

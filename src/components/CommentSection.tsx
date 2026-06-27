@@ -14,6 +14,7 @@ import {
   updateDoc,
   doc,
   increment,
+  getDoc,
 } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { Trash2, X } from "lucide-react";
@@ -58,9 +59,13 @@ export default function CommentSection({ postId }: { postId: string }) {
     if (!text.trim() || sending) return;
     setSending(true);
     try {
+      const userSnap = await getDoc(doc(db, "users", user.uid));
+      const userName = userSnap.exists()
+        ? userSnap.data().username
+        : "Anonymous";
       await addDoc(collection(db, "posts", postId, "comments"), {
         userId: user.uid,
-        userName: user.displayName || user.email?.split("@")[0] || "Anonymous",
+        userName,
         userPhoto: user.photoURL || null,
         content: text.trim(),
         createdAt: serverTimestamp(),

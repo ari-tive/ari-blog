@@ -30,3 +30,9 @@ export interface Like {
   userId: string;
   createdAt: Timestamp;
 }
+
+export interface UserDoc {
+  username: string;
+  usernameLower: string;
+  createdAt: Timestamp;
+}
