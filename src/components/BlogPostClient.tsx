@@ -17,9 +17,47 @@ function formatDate(ts: { seconds: number }) {
   });
 }
 
+function LoaderDots() {
+  return (
+    <div className="absolute inset-0 flex items-center justify-center">
+      <span className="inline-flex gap-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:0ms]" />
+        <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:150ms]" />
+        <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/60 animate-bounce [animation-delay:300ms]" />
+      </span>
+    </div>
+  );
+}
+
+function GalleryImage({
+  url,
+  className,
+  onClick,
+}: {
+  url: string;
+  className?: string;
+  onClick?: () => void;
+}) {
+  const [loaded, setLoaded] = useState(false);
+
+  return (
+    <div className="relative" style={{ minHeight: className?.includes("lightbox") ? undefined : 80 }}>
+      {!loaded && <LoaderDots />}
+      <img
+        src={url}
+        alt=""
+        className={`${className ?? ""} ${loaded ? "opacity-100" : "opacity-0"} transition-opacity duration-300`}
+        onLoad={() => setLoaded(true)}
+        onClick={onClick}
+      />
+    </div>
+  );
+}
+
 export default function BlogPostClient({ post }: { post: Post }) {
   const images = post.images || [];
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const [lightboxLoaded, setLightboxLoaded] = useState(false);
   const [shouldAutoScroll, setShouldAutoScroll] = useState(false);
   const trackRef = useRef<HTMLDivElement>(null);
 
@@ -43,12 +81,14 @@ export default function BlogPostClient({ post }: { post: Post }) {
   }
 
   function lightboxPrev() {
+    setLightboxLoaded(false);
     setLightboxIndex((i) =>
       i !== null ? (i - 1 + images.length) % images.length : null
     );
   }
 
   function lightboxNext() {
+    setLightboxLoaded(false);
     setLightboxIndex((i) =>
       i !== null ? (i + 1) % images.length : null
     );
@@ -91,9 +131,8 @@ export default function BlogPostClient({ post }: { post: Post }) {
                     onClick={() => openLightbox(i % images.length)}
                     className="shrink-0 rounded-xl overflow-hidden bg-white/5 cursor-zoom-in hover:opacity-90 transition-opacity"
                   >
-                    <img
-                      src={img.url}
-                      alt=""
+                    <GalleryImage
+                      url={img.url}
                       className="max-h-64 sm:max-h-80 w-auto object-contain"
                     />
                   </button>
@@ -109,9 +148,8 @@ export default function BlogPostClient({ post }: { post: Post }) {
                   onClick={() => openLightbox(i)}
                   className="shrink-0 rounded-xl overflow-hidden bg-white/5 cursor-zoom-in hover:opacity-90 transition-opacity"
                 >
-                  <img
-                    src={img.url}
-                    alt=""
+                  <GalleryImage
+                    url={img.url}
                     className="max-h-64 sm:max-h-80 w-auto object-contain"
                   />
                 </button>
@@ -174,12 +212,23 @@ export default function BlogPostClient({ post }: { post: Post }) {
             </button>
           )}
 
-          <img
-            src={images[lightboxIndex].url}
-            alt=""
-            className="max-w-[95vw] sm:max-w-[90vw] max-h-[85vh] sm:max-h-[90vh] object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
+          <div className="relative" onClick={(e) => e.stopPropagation()}>
+            {!lightboxLoaded && (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="inline-flex gap-1">
+                  <span className="w-2 h-2 rounded-full bg-white/60 animate-bounce [animation-delay:0ms]" />
+                  <span className="w-2 h-2 rounded-full bg-white/60 animate-bounce [animation-delay:150ms]" />
+                  <span className="w-2 h-2 rounded-full bg-white/60 animate-bounce [animation-delay:300ms]" />
+                </span>
+              </div>
+            )}
+            <img
+              src={images[lightboxIndex].url}
+              alt=""
+              className={`max-w-[95vw] sm:max-w-[90vw] max-h-[85vh] sm:max-h-[90vh] object-contain ${lightboxLoaded ? "opacity-100" : "opacity-0"} transition-opacity duration-300`}
+              onLoad={() => setLightboxLoaded(true)}
+            />
+          </div>
 
           {images.length > 1 && (
             <button
