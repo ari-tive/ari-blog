@@ -9,8 +9,6 @@ import {
   getDocs,
   orderBy,
   query,
-  where,
-  documentId,
 } from "firebase/firestore";
 import Hero from "@/components/Hero";
 import PostsGrid from "@/components/PostsGrid";
