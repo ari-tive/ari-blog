@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { PostImage } from "@/lib/types";
-import { X, Check, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
+import { Plus, X, Check, Image as ImageIcon, Upload, Loader2 } from "lucide-react";
 
 interface Props {
   images: PostImage[];
@@ -14,6 +14,15 @@ export default function WizardStepImages({ images, onChange }: Props) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const [url, setUrl] = useState("");
+
+  function addUrl() {
+    const trimmed = url.trim();
+    if (!trimmed) return;
+    if (images.some((img) => img.url === trimmed)) return;
+    onChange([...images, { url: trimmed, isThumbnail: images.length === 0 }]);
+    setUrl("");
+  }
 
   const uploadFiles = useCallback(
     async (files: File[]) => {
@@ -83,6 +92,26 @@ export default function WizardStepImages({ images, onChange }: Props) {
 
   return (
     <div className="flex flex-col gap-5">
+      <div className="flex gap-2">
+        <input
+          type="url"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addUrl())}
+          placeholder="Paste image URL..."
+          className="flex-1 px-4 py-3 rounded-lg bg-white/5 border border-border text-foreground text-sm placeholder:text-muted-foreground focus:outline-none focus:border-foreground/30 transition-colors"
+        />
+        <button
+          type="button"
+          onClick={addUrl}
+          disabled={!url.trim()}
+          className="px-4 py-3 rounded-lg bg-white/10 border border-border text-foreground text-sm hover:bg-white/15 transition-colors disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          <Plus size={16} />
+          Add
+        </button>
+      </div>
+
       <input
         ref={inputRef}
         type="file"
@@ -117,7 +146,7 @@ export default function WizardStepImages({ images, onChange }: Props) {
         <span className="text-sm">
           {uploading
             ? "Uploading..."
-            : "Click to upload or drag images here"}
+            : "Or click to upload / drag images here"}
         </span>
       </button>
 
@@ -133,7 +162,7 @@ export default function WizardStepImages({ images, onChange }: Props) {
         <div className="flex flex-col items-center justify-center py-16 rounded-xl border border-dashed border-border text-muted-foreground">
           <ImageIcon size={32} className="mb-3 opacity-40" />
           <p className="text-sm">No images added yet</p>
-          <p className="text-xs mt-1">Upload images above — optional for a post</p>
+          <p className="text-xs mt-1">Add by URL or upload above — optional for a post</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -151,9 +180,6 @@ export default function WizardStepImages({ images, onChange }: Props) {
                   src={img.url}
                   alt=""
                   className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = "none";
-                  }}
                 />
               </div>
 
